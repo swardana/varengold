@@ -18,6 +18,7 @@ public class PushNotificationService {
         List<PushEntity> list = null;
         try {
             if (request != null) {
+                payload.setMessageType(request.getMessageType());
                 if (!request.getPushTokens().isEmpty()) {
                     payload.setDevices(Arrays.asList(request.getPushTokens().split(",")));
                 } else if (!request.getTopics().isEmpty()) {

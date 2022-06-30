@@ -7,6 +7,7 @@ public class NotificationVO {
     private String status;
     private List<String> topics;
     private List<String> devices;
+    private String messageType;
     private FcmRes results;
 
     public String getStatus() {
@@ -31,6 +32,14 @@ public class NotificationVO {
 
     public void setDevices(List<String> devices) {
         this.devices = devices;
+    }
+
+    public String getMessageType() {
+        return messageType;
+    }
+
+    public void setMessageType(String messageType) {
+        this.messageType = messageType;
     }
 
     public FcmRes getResults() {
