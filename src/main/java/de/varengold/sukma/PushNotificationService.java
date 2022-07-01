@@ -10,6 +10,9 @@ public class PushNotificationService {
 
     public Response execute(Request request) {
         NotificationVO payload = new NotificationVO();
+        /**
+         * Map the {@code request} into {@code payload}.
+         */
         Response response = new Response();
         /**
          * Populate {@code response} header metadata
