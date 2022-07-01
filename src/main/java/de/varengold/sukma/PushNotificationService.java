@@ -13,52 +13,54 @@ public class PushNotificationService {
     private static final String TXN_STATUS_FAIL = "FAIL";
 
     public Response execute(Request request) {
-        NotificationVO payload = new NotificationVO();
         Response response = new Response();
-        List<PushEntity> list = null;
-        try {
-            if (request != null) {
-                payload.setMessageType(request.getMessageType());
-                if (!request.getPushTokens().isEmpty()) {
-                    payload.setDevices(Arrays.asList(request.getPushTokens().split(",")));
-                } else if (!request.getTopics().isEmpty()) {
-                    payload.setTopics(Arrays.asList(request.getTopics().split(",")));
-                } else {
-                    payload.setStatus(TXN_STATUS_FAIL);
-                }
-                try {
-                    if(!payload.getStatus().equals(TXN_STATUS_FAIL)) {
-                        SendPushNotification.push(payload);
-                        FcmRes fcmRes = payload.getResults();
-                        List<FcmResItem> resResult = fcmRes != null ? fcmRes.getResults() : null;
-                        if(resResult != null && !resResult.isEmpty()) {
-                            list = new ArrayList<>();
-                            response.setResults(list);
-                            for (FcmResItem item : resResult) {
-                                PushEntity entity = new PushEntity();
-                                if (item.getErrorCode() != null && !item.getErrorCode().isEmpty()) {
-                                    entity.setPushMessageId(item.getMessageId());
-                                } else {
-                                    entity.setErrorCode(item.getErrorCode());
-                                }
-                            }
-                        }
-                    }
-                } catch(RuntimeException ex) {
-                    payload.setStatus(TXN_STATUS_FAIL);
-                }
-            }
-        } catch(Exception ex) {
-            System.out.println("log and ignored");
-        } finally {
-            if (response.getResults() != null && !response.getResults().isEmpty()) {
-                for(PushEntity entity : response.getResults()) {
-                    System.out.println("store into database");
-                }
-            }
+        NotificationVO payload = new NotificationVO();
+        PushNotificationTransService trans = new PushNotificationTransService();
+        /**
+         * Fill {@code response} header metadata with default value and
+         * assume is success.
+         */
+        if (isTopic(request)) {
+            payload.setTopics(Arrays.asList(request.getTopics().split(",")));
+            new TopicMessage().send(payload);
+        } else if (isDevice(request)) {
+            payload.setDevices(Arrays.asList(request.getPushTokens().split(",")));
+            new DeviceMessage().send(payload);
+        } else {
+            // set the {@code response} header metadata as fail.
+            payload.setStatus(TXN_STATUS_FAIL);
         }
+        List<PushEntity> entities = populateEntities(payload.getResults());
+        entities.stream().forEach(e -> trans.createPushNotificationDetails(payload, e));
+        response.setResults(entities);
         return response;
     }
 
+    private boolean isTopic(Request request) {
+        return request != null && request.getMessageType().equals("TOPIC") &&
+            request.getTopics() != null && !request.getTopics().isEmpty();
+    }
+
+    private boolean isDevice(Request request) {
+        return request != null && request.getMessageType().equals("DEVICE") &&
+            request.getPushTokens() != null && !request.getPushTokens().isEmpty();
+    }
+
+    private List<PushEntity> populateEntities(FcmRes fcm) {
+        List<PushEntity> entities = new ArrayList<>();
+        List<FcmResItem> resResult = fcm != null ? fcm.getResults() : null;
+        if(resResult != null && !resResult.isEmpty()) {
+            for (FcmResItem item : resResult) {
+                PushEntity entity = new PushEntity();
+                entities.add(entity);
+                if (item.getErrorCode() != null && !item.getErrorCode().isEmpty()) {
+                    entity.setPushMessageId(item.getMessageId());
+                } else {
+                    entity.setErrorCode(item.getErrorCode());
+                }
+            }
+        }
+        return entities;
+    }
 
 }
