@@ -20,17 +20,18 @@ public class PushNotificationService {
          * Fill {@code response} header metadata with default value and
          * assume is success.
          */
+        FcmRes fcmRes = null;
         if (isTopic(request)) {
             payload.setTopics(Arrays.asList(request.getTopics().split(",")));
-            new TopicMessage().send(payload);
+            fcmRes = new TopicMessage(payload).send();
         } else if (isDevice(request)) {
             payload.setDevices(Arrays.asList(request.getPushTokens().split(",")));
-            new DeviceMessage().send(payload);
+            fcmRes = new DeviceMessage(payload).send();
         } else {
             // set the {@code response} header metadata as fail.
             payload.setStatus(TXN_STATUS_FAIL);
         }
-        List<PushEntity> entities = populateEntities(payload.getResults());
+        List<PushEntity> entities = populateEntities(fcmRes);
         entities.stream().forEach(e -> trans.createPushNotificationDetails(payload, e));
         response.setResults(entities);
         return response;
