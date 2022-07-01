@@ -4,10 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- *
- * @author laila
- */
 public class PushNotificationService {
 
     private static final String TXN_STATUS_FAIL = "FAIL";
@@ -15,6 +11,10 @@ public class PushNotificationService {
     public Response execute(Request request) {
         NotificationVO payload = new NotificationVO();
         Response response = new Response();
+        /**
+         * Populate {@code response} header metadata
+         * assumed the process is success.
+         */
         List<PushEntity> list = null;
         try {
             if (request != null) {
@@ -36,6 +36,7 @@ public class PushNotificationService {
                             response.setResults(list);
                             for (FcmResItem item : resResult) {
                                 PushEntity entity = new PushEntity();
+                                list.add(entity);
                                 if (item.getErrorCode() != null && !item.getErrorCode().isEmpty()) {
                                     entity.setPushMessageId(item.getMessageId());
                                 } else {
@@ -46,14 +47,19 @@ public class PushNotificationService {
                     }
                 } catch(RuntimeException ex) {
                     payload.setStatus(TXN_STATUS_FAIL);
+                    /**
+                     * Update the {@code response} header metadata
+                     * to change the status into error
+                     */
                 }
             }
         } catch(Exception ex) {
             System.out.println("log and ignored");
         } finally {
             if (response.getResults() != null && !response.getResults().isEmpty()) {
+                PushNotificationTransService service = new PushNotificationTransService();
                 for(PushEntity entity : response.getResults()) {
-                    System.out.println("store into database");
+                    service.createPushNotificationDetails(payload, entity);
                 }
             }
         }
